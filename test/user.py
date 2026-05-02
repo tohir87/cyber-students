@@ -5,6 +5,7 @@ from tornado.ioloop import IOLoop
 from tornado.web import Application
 
 from api.handlers.user import UserHandler
+from api.crypto import encrypt, hash_password, hash_token
 
 from .base import BaseTest
 
@@ -18,15 +19,15 @@ class UserHandlerTest(BaseTest):
     async def register(self):
         await self.get_app().db.users.insert_one({
             'email': self.email,
-            'password': self.password,
-            'displayName': self.display_name
+            'password': hash_password(self.password),
+            'fullName': encrypt(self.full_name),
         })
 
     async def login(self):
         await self.get_app().db.users.update_one({
             'email': self.email
         }, {
-            '$set': { 'token': self.token, 'expiresIn': 2147483647 }
+            '$set': { 'token': hash_token(self.token), 'expiresIn': 2147483647 }
         })
 
     def setUp(self):
@@ -34,7 +35,7 @@ class UserHandlerTest(BaseTest):
 
         self.email = 'test@test.com'
         self.password = 'testPassword'
-        self.display_name = 'testDisplayName'
+        self.full_name = 'testDisplayName'
         self.token = 'testToken'
 
         IOLoop.current().run_sync(self.register)
@@ -48,7 +49,7 @@ class UserHandlerTest(BaseTest):
 
         body_2 = json_decode(response.body)
         self.assertEqual(self.email, body_2['email'])
-        self.assertEqual(self.display_name, body_2['displayName'])
+        self.assertEqual(self.full_name, body_2['fullName'])
 
     def test_user_without_token(self):
         response = self.fetch('/user')

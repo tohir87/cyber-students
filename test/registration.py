@@ -18,12 +18,12 @@ class RegistrationHandlerTest(BaseTest):
 
     def test_registration(self):
         email = 'test@test.com'
-        display_name = 'testDisplayName'
+        full_name = 'testDisplayName'
 
         body = {
           'email': email,
           'password': 'testPassword',
-          'displayName': display_name
+          'fullName': full_name
         }
 
         response = self.fetch('/registration', method='POST', body=dumps(body))
@@ -31,7 +31,7 @@ class RegistrationHandlerTest(BaseTest):
 
         body_2 = json_decode(response.body)
         self.assertEqual(email, body_2['email'])
-        self.assertEqual(display_name, body_2['displayName'])
+        self.assertEqual(full_name, body_2['fullName'])
 
     def test_registration_without_display_name(self):
         email = 'test@test.com'
@@ -46,13 +46,13 @@ class RegistrationHandlerTest(BaseTest):
 
         body_2 = json_decode(response.body)
         self.assertEqual(email, body_2['email'])
-        self.assertEqual(email, body_2['displayName'])
+        self.assertEqual(email, body_2['fullName'])
 
     def test_registration_twice(self):
         body = {
           'email': 'test@test.com',
           'password': 'testPassword',
-          'displayName': 'testDisplayName'
+          'fullName': 'testDisplayName'
         }
 
         response = self.fetch('/registration', method='POST', body=dumps(body))

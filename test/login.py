@@ -7,6 +7,7 @@ from .base import BaseTest
 
 from api.handlers.login import LoginHandler
 from api.crypto import encrypt, hash_password
+from api.conf import MAX_LOGIN_ATTEMPTS
 
 class LoginHandlerTest(BaseTest):
 
@@ -73,3 +74,15 @@ class LoginHandlerTest(BaseTest):
 
         response = self.fetch('/login', method='POST', body=dumps(body))
         self.assertEqual(403, response.code)
+
+    def test_login_rate_limit(self):
+        body = {
+            'email': self.email,
+            'password': 'wrongPassword'
+        }
+        for _ in range(MAX_LOGIN_ATTEMPTS):
+            response = self.fetch('/login', method='POST', body=dumps(body))
+            self.assertEqual(403, response.code)
+
+        response = self.fetch('/login', method='POST', body=dumps(body))
+        self.assertEqual(429, response.code)

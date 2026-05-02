@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from .base import BaseHandler
 from ..crypto import hash_token, verify_password
+from ..conf import MAX_LOGIN_ATTEMPTS, LOGIN_LOCKOUT_MINUTES
 
 
 class LoginHandler(BaseHandler):
@@ -46,16 +47,35 @@ class LoginHandler(BaseHandler):
         user = await self.db.users.find_one({
           'email': email
         }, {
-          'password': 1
+          'password': 1,
+          'loginFailedAttempts': 1,
+          'loginLockedUntil': 1,
         })
 
         if user is None:
             self.send_error(403, message='The email address and password are invalid!')
             return
 
+        locked_until = user.get('loginLockedUntil')
+        if locked_until and datetime.now(timezone.utc).timestamp() < locked_until:
+            self.send_error(429, message='Too many failed login attempts. Please try again later.')
+            return
+
         if not verify_password(password, user['password']):
+            attempts = user.get('loginFailedAttempts', 0) + 1
+            update = {'loginFailedAttempts': attempts}
+            if attempts >= MAX_LOGIN_ATTEMPTS:
+                update['loginLockedUntil'] = (
+                    datetime.now(timezone.utc) + timedelta(minutes=LOGIN_LOCKOUT_MINUTES)
+                ).timestamp()
+            await self.db.users.update_one({'email': email}, {'$set': update})
             self.send_error(403, message='The email address and password are invalid!')
             return
+
+        await self.db.users.update_one(
+            {'email': email},
+            {'$set': {'loginFailedAttempts': 0, 'loginLockedUntil': None}}
+        )
 
         token = await self.generate_token(email)
 

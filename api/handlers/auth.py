@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 
 from .base import BaseHandler
+from ..crypto import decrypt, hash_token
+
 
 class AuthHandler(BaseHandler):
 
@@ -20,10 +22,10 @@ class AuthHandler(BaseHandler):
             return
 
         user = await self.db.users.find_one({
-            'token': token
+            'token': hash_token(token)
         }, {
             'email': 1,
-            'displayName': 1,
+            'fullName': 1,
             'expiresIn': 1
         })
 
@@ -38,7 +40,8 @@ class AuthHandler(BaseHandler):
             self.send_error(403, message='Your token has expired!')
             return
 
+        full_name_enc = user.get('fullName')
         self.current_user = {
             'email': user['email'],
-            'display_name': user['displayName']
+            'full_name': decrypt(full_name_enc) if full_name_enc else None,
         }

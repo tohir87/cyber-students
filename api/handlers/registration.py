@@ -1,6 +1,8 @@
 from tornado.escape import json_decode
 
 from .base import BaseHandler
+from ..crypto import encrypt, hash_password
+
 
 class RegistrationHandler(BaseHandler):
 
@@ -9,13 +11,13 @@ class RegistrationHandler(BaseHandler):
             body = json_decode(self.request.body)
             email = body['email'].lower().strip()
             password = body['password']
-            display_name = body.get('displayName')
-            if display_name is None:
-                display_name = email
-            if not isinstance(display_name, str):
-                raise Exception('Display name must be a string')
+            full_name = body.get('fullName')
+            if full_name is None:
+                full_name = email
+            if not isinstance(full_name, str):
+                raise Exception('Full name must be a string')
         except Exception:
-            self.send_error(400, message='You must provide an email address, password and display name!')
+            self.send_error(400, message='You must provide an email address, password and full name!')
             return
 
         if not email:
@@ -26,8 +28,8 @@ class RegistrationHandler(BaseHandler):
             self.send_error(400, message='The password is invalid!')
             return
 
-        if not display_name:
-            self.send_error(400, message='The display name is invalid!')
+        if not full_name:
+            self.send_error(400, message='The full name is invalid!')
             return
 
         user = await self.db.users.find_one({
@@ -40,12 +42,12 @@ class RegistrationHandler(BaseHandler):
 
         await self.db.users.insert_one({
             'email': email,
-            'password': password,
-            'displayName': display_name
+            'password': hash_password(password),
+            'fullName': encrypt(full_name),
         })
 
         self.set_status(200)
         self.response['email'] = email
-        self.response['displayName'] = display_name
+        self.response['fullName'] = full_name
 
         self.write_json()

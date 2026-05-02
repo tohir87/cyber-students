@@ -23,7 +23,8 @@ class RegistrationHandlerTest(BaseTest):
         body = {
           'email': email,
           'password': 'testPassword',
-          'fullName': full_name
+          'fullName': full_name,
+          'consentGiven': True,
         }
 
         response = self.fetch('/registration', method='POST', body=dumps(body))
@@ -38,7 +39,8 @@ class RegistrationHandlerTest(BaseTest):
 
         body = {
           'email': email,
-          'password': 'testPassword'
+          'password': 'testPassword',
+          'consentGiven': True,
         }
 
         response = self.fetch('/registration', method='POST', body=dumps(body))
@@ -48,11 +50,33 @@ class RegistrationHandlerTest(BaseTest):
         self.assertEqual(email, body_2['email'])
         self.assertEqual(email, body_2['fullName'])
 
+    def test_registration_without_consent(self):
+        body = {
+          'email': 'test@test.com',
+          'password': 'testPassword',
+          'fullName': 'testDisplayName',
+        }
+
+        response = self.fetch('/registration', method='POST', body=dumps(body))
+        self.assertEqual(400, response.code)
+
+    def test_registration_consent_false(self):
+        body = {
+          'email': 'test@test.com',
+          'password': 'testPassword',
+          'fullName': 'testDisplayName',
+          'consentGiven': False,
+        }
+
+        response = self.fetch('/registration', method='POST', body=dumps(body))
+        self.assertEqual(400, response.code)
+
     def test_registration_twice(self):
         body = {
           'email': 'test@test.com',
           'password': 'testPassword',
-          'fullName': 'testDisplayName'
+          'fullName': 'testDisplayName',
+          'consentGiven': True,
         }
 
         response = self.fetch('/registration', method='POST', body=dumps(body))

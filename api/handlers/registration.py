@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from tornado.escape import json_decode
 
 from .base import BaseHandler
@@ -16,6 +17,7 @@ class RegistrationHandler(BaseHandler):
                 full_name = email
             if not isinstance(full_name, str):
                 raise Exception('Full name must be a string')
+            consent_given = body.get('consentGiven', False)
         except Exception:
             self.send_error(400, message='You must provide an email address, password and full name!')
             return
@@ -32,6 +34,10 @@ class RegistrationHandler(BaseHandler):
             self.send_error(400, message='The full name is invalid!')
             return
 
+        if consent_given is not True:
+            self.send_error(400, message='You must provide consent to process your personal data (GDPR).')
+            return
+
         user = await self.db.users.find_one({
           'email': email
         })
@@ -44,6 +50,8 @@ class RegistrationHandler(BaseHandler):
             'email': email,
             'password': hash_password(password),
             'fullName': encrypt(full_name),
+            'consentGiven': True,
+            'consentTimestamp': datetime.now(timezone.utc).isoformat(),
         })
 
         self.set_status(200)

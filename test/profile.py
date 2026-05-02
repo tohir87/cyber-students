@@ -22,6 +22,7 @@ class ProfileHandlerTest(BaseTest):
             'email': self.email,
             'password': hash_password(self.password),
             'fullName': encrypt(self.full_name),
+            'consentGiven': True,
         })
 
     async def login(self):
@@ -90,3 +91,29 @@ class ProfileHandlerTest(BaseTest):
     def test_profile_without_token(self):
         response = self.fetch('/profile')
         self.assertEqual(400, response.code)
+
+    def test_profile_without_consent(self):
+        no_consent_email = 'noconsent@test.com'
+        no_consent_token = 'noConsentToken'
+
+        async def setup():
+            await self.get_app().db.users.insert_one({
+                'email': no_consent_email,
+                'password': hash_password('testPassword'),
+                'fullName': encrypt('No Consent User'),
+                'consentGiven': False,
+                'token': hash_token(no_consent_token),
+                'expiresIn': 2147483647,
+            })
+
+        IOLoop.current().run_sync(setup)
+
+        headers = HTTPHeaders({'X-Token': no_consent_token})
+        body = {
+            'address': '1 Secret Lane',
+            'dateOfBirth': '2000-01-01',
+            'phoneNumber': '000-0000',
+            'disabilities': [],
+        }
+        response = self.fetch('/profile', method='POST', body=dumps(body), headers=headers)
+        self.assertEqual(403, response.code)

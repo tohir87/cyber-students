@@ -42,6 +42,14 @@ class ProfileHandler(AuthHandler):
             self.send_error(400, message='Unable to parse JSON.')
             return
 
+        user = await self.db.users.find_one(
+            {'email': self.current_user['email']},
+            {'consentGiven': 1}
+        )
+        if not (user and user.get('consentGiven') is True):
+            self.send_error(403, message='Consent is required to store personal data (GDPR).')
+            return
+
         profile = {}
         for field in ('address', 'dateOfBirth', 'phoneNumber'):
             if field in body:
